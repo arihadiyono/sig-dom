@@ -9,5 +9,8 @@ SIG - Delivery Operation Monitoring
  - Tri Windyartono - 714252003
  
 # Ruang Lingkup & Fitur Utama
-Pelacakan Rute ANTARAN Harian dengan Visualisasi data titik (points) yang direkam dari handheld petugas saat melakukan pembaruan/update status (misalnya: "Delivered", "Failed", "On Process"). Karena jika titik-titik ini diurutkan berdasarkan waktu, akan membentuk rute perjalanan harian petugas antaran.
+ 1. MANAJEMEN ZONA ANTARAN dengan Visualisasi data poligon yang merepresentasikan wilayah kerja (zona antaran) yang biasanya mereferensikan satu atau lebih wilayah kodepos. Karena setiap poligon zona akan termapping dengan petugas antaran dan kode kantor
+ 2. Pelacakan Rute ANTARAN Harian dengan Visualisasi data titik (points) yang direkam dari handheld petugas saat melakukan pembaruan/update status (misalnya: "Delivered", "Failed", "On Process"). Karena jika titik-titik ini diurutkan berdasarkan waktu, akan membentuk rute perjalanan harian petugas antaran.
+
+
 
