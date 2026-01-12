@@ -45,7 +45,7 @@ def main_app():
     user = st.session_state.user_info
     
     # SIDEBAR NAVIGASI
-    st.sidebar.image("https://upload.wikimedia.org/wikipedia/id/thumb/0/00/Pos_Indonesia_2012.svg/1200px-Pos_Indonesia_2012.svg.png", width=80)
+    st.sidebar.image("Logo Posind Biru.png", width=80)
     st.sidebar.title("SIG-DOM Dashboard")
     st.sidebar.info(f"📍 {user['nama']}")
     
