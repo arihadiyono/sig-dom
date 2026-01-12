@@ -1,43 +1,48 @@
 import streamlit as st
+import pandas as pd
+from sqlalchemy import create_engine, text
 import os
 
-# 1. Cek Library (Debugging)
-try:
-    import sqlalchemy
-    import pandas as pd
-    # Jika menggunakan pg8000, aktifkan baris bawah:
-    # import pg8000 
-except ImportError as e:
-    st.error(f"Library tidak ditemukan: {e}. Silakan Reboot App di Dashboard Streamlit.")
-    st.stop()
-
-from sqlalchemy import create_engine, text
-
-# 2. Page Config
+# 1. Inisialisasi Halaman
 st.set_page_config(page_title="SIG-DOM POS", layout="wide")
 
-# 3. Database Engine
+# 2. Fungsi Engine dengan pool_pre_ping
 @st.cache_resource
 def get_engine():
+    # Pastikan mengambil dari st.secrets agar sinkron dengan Streamlit Cloud
     if "DB_URL" not in st.secrets:
-        st.error("Gagal: DB_URL tidak ada di Secrets!")
+        st.error("Konfigurasi DB_URL hilang di Secrets!")
         return None
+    
+    db_url = st.secrets["DB_URL"]
     try:
-        # Gunakan pool_pre_ping agar koneksi ke Supabase tetap hidup
-        return create_engine(st.secrets["DB_URL"], pool_pre_ping=True)
+        # pool_pre_ping=True akan mengetes koneksi sebelum digunakan
+        # Sangat krusial untuk mencegah 'OperationalError' di server Cloud
+        return create_engine(
+            db_url, 
+            pool_pre_ping=True,
+            pool_recycle=300
+        )
     except Exception as e:
-        st.error(f"Engine Error: {e}")
+        st.error(f"Gagal Inisialisasi Engine: {e}")
         return None
 
 engine = get_engine()
 
-# 4. UI Sederhana untuk Tes
-st.title("🚚 SIG-DOM POS INDONESIA")
+# 3. UI Utama
+st.title("🚚 SIG-DOM PT POS INDONESIA")
 
 if engine:
     try:
+        # Tes koneksi sederhana
         with engine.connect() as conn:
             conn.execute(text("SELECT 1"))
-            st.success("✅ Koneksi Database Berhasil!")
+            st.success("✅ Koneksi Berhasil! Database Terhubung.")
+            
+            # Tampilkan menu setelah sukses login/koneksi
+            st.info("Sistem siap digunakan. Silakan akses menu di sidebar.")
+            
     except Exception as e:
-        st.error(f"❌ Koneksi Gagal: {e}")
+        st.error("❌ Gagal Terhubung ke Database.")
+        st.warning(f"Detail Error: {str(e)}")
+        st.info("Tips: Pastikan Project ID di username sudah benar (postgres.vlsyyhlsvwjavfrzruyd)")
