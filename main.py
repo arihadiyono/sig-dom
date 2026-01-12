@@ -104,7 +104,7 @@ def main_app():
                             'weight': 2,
                             'fillOpacity': 0.7,
                         },
-                        tooltip=folium.Tooltip(f"Kodepos : {row['kodepos']} <br>Kecamatan : {row['kecamatan']} <br> Kelurahan : {row['kelurahan']} ")
+                        tooltip=folium.Tooltip(f"Kodepos : {row['kodepos']} <br>Kecamatan : {row['kecamatan']} <br> Kelurahan : {row['kelurahan']} <br> ")
                     ).add_to(m)
 
                 st_folium(m, width="100%", height=600)
@@ -190,7 +190,7 @@ def main_app():
                                 
                                 folium.Marker(
                                     location=[row['latitude'], row['longitude']],
-                                    popup=f"<b>Connote : </b> {row['connote']}<br> <b> Penerima : </b>  {row['penerima']}",
+                                    popup=f"<b>Connote : </b> {row['connote']}<br> <b> Penerima : </b>  {row['penerima']} <br> <b> produk : </b>  {row['produk']}",
                                     tooltip=f"{row['connote']}",
                                     icon=folium.Icon(color=color_icon, icon='bicycle', prefix='fa')
                                 ).add_to(m_antaran)
