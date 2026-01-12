@@ -40,7 +40,7 @@ def login_ui():
     c1, c2, c3 = st.columns([1, 1.2, 1])
     with c2:
         # Menambahkan Logo di Halaman Login
-        st.image("Logo Posind Biru.png", width=200) 
+        st.image("Logo Posind Biru.png", width=60) 
         st.title("Login SIG-DOM")
         st.subheader("PT Pos Indonesia (Persero)")
         with st.form("login_form"):
@@ -65,7 +65,7 @@ def main_app():
     user = st.session_state.user_info
     
     # SIDEBAR NAVIGASI
-    st.sidebar.image("Logo Posind Biru.png", use_container_width=True) # Logo di Sidebar
+    st.sidebar.image("Logo Posind Biru.png", use_container_width=True, width=30) # Logo di Sidebar
     st.sidebar.markdown("---")
     st.sidebar.title("SIG-DOM Dashboard")
     st.sidebar.info(f"📍 {user['nama']}")
