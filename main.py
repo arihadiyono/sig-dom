@@ -1,97 +1,53 @@
 import streamlit as st
 import pandas as pd
 from sqlalchemy import create_engine, text
-import folium
-from streamlit_folium import st_folium
-import os
-from datetime import datetime
 
-# 1. PAGE CONFIG
-st.set_page_config(page_title="SIG-DOM POS", page_icon="🚚", layout="wide")
+st.set_page_config(page_title="SIG-DOM POS", layout="wide")
 
-# 2. DATABASE ENGINE (DENGAN RE-TRY LOGIC)
+# Fungsi koneksi yang lebih robust
 @st.cache_resource
 def get_engine():
     if "DB_URL" not in st.secrets:
-        st.error("Secrets DB_URL belum diatur!")
+        st.error("DB_URL tidak ditemukan!")
         return None
+    
+    url = st.secrets["DB_URL"]
     try:
-        # Menggunakan pool_pre_ping agar jika koneksi drop, engine akan mencoba lagi
+        # Menambahkan argument 'options' secara manual untuk membantu Supavisor menemukan Tenant
+        # Ganti [PROJECT_REF] dengan vlsyyhlsvwjavfrzruyd
         return create_engine(
-            st.secrets["DB_URL"],
-            pool_pre_ping=True,
-            pool_size=5,
-            max_overflow=0
+            url,
+            connect_args={
+                "options": "-c search_path=public",
+                "connect_timeout": 10
+            },
+            pool_pre_ping=True
         )
     except Exception as e:
-        st.error(f"Engine Error: {e}")
+        st.error(f"Inisialisasi Gagal: {e}")
         return None
 
 engine = get_engine()
 
-# 3. FUNGSI AUTH
-def check_login(u, p):
-    if not engine: return None
-    try:
-        query = text("""
-            SELECT id_kantor, username, nama_kantor 
-            FROM users_dc 
-            WHERE username = :u AND password_hash = :p AND status = 'aktif'
-        """)
-        with engine.connect() as conn:
-            return conn.execute(query, {"u": u, "p": p}).fetchone()
-    except Exception as e:
-        st.error(f"Gagal Query Login: {e}")
-        return None
+st.title("🚚 SIG-DOM POS Login")
 
-# --- APP FLOW ---
-if 'auth' not in st.session_state:
-    st.session_state.auth = None
-
-if not st.session_state.auth:
-    # --- HALAMAN LOGIN ---
-    c1, c2, c3 = st.columns([1, 1.2, 1])
-    with c2:
-        st.markdown("<br><br>", unsafe_allow_html=True)
-        st.image("https://upload.wikimedia.org/wikipedia/id/thumb/0/00/Pos_Indonesia_2012.svg/1200px-Pos_Indonesia_2012.svg.png", width=120)
-        st.title("SIG-DOM Login")
-        with st.form("login"):
-            u_in = st.text_input("Username")
-            p_in = st.text_input("Password", type="password")
-            if st.form_submit_button("Masuk", use_container_width=True):
-                user_data = check_login(u_in, p_in)
-                if user_data:
-                    st.session_state.auth = user_data
-                    st.rerun()
-                else:
-                    st.error("❌ Username/Password salah atau akun tidak aktif.")
-else:
-    # --- DASHBOARD ---
-    user = st.session_state.auth
-    st.sidebar.title("🚚 SIG-DOM POS")
-    st.sidebar.success(f"📍 {user[2]}") # nama_kantor
-    
-    menu = st.sidebar.radio("Navigasi", ["Peta Zona", "History Antaran"])
-    
-    if st.sidebar.button("Keluar"):
-        st.session_state.auth = None
-        st.rerun()
-
-    if menu == "Peta Zona":
-        st.header(f"Wilayah Antaran {user[2]}")
-        try:
-            with engine.connect() as conn:
-                df = pd.read_sql(text("SELECT kodepos, nama_zona, ST_AsGeoJSON(geom)::json as geo FROM zona_antaran"), conn)
-            
-            if not df.empty:
-                m = folium.Map(location=[-6.9147, 107.6098], zoom_start=13)
-                for _, row in df.iterrows():
-                    folium.GeoJson(row['geo'], tooltip=row['nama_zona']).add_to(m)
-                st_folium(m, width="100%", height=500)
-            else:
-                st.warning("Belum ada data zona.")
-        except Exception as e:
-            st.error(f"Peta gagal dimuat: {e}")
-
-st.markdown("---")
-st.caption(f"SIG-DOM v1.6 | Mumbai Region | {datetime.now().year}")
+# FORM LOGIN SEDERHANA UNTUK TES
+with st.form("login"):
+    u = st.text_input("Username")
+    p = st.text_input("Password", type="password")
+    if st.form_submit_button("Masuk"):
+        if engine:
+            try:
+                with engine.connect() as conn:
+                    # Query menggunakan parameter bind untuk keamanan
+                    query = text("SELECT username, nama_kantor FROM users_dc WHERE username = :u AND password_hash = :p")
+                    result = conn.execute(query, {"u": u, "p": p}).fetchone()
+                    
+                    if result:
+                        st.success(f"Selamat Datang, {result[1]}!")
+                        st.session_state.auth = True
+                    else:
+                        st.error("User tidak ditemukan di database.")
+            except Exception as e:
+                st.error(f"Error Koneksi: {e}")
+                st.info("Jika muncul 'Tenant not found', pastikan Username di Secrets adalah: postgres.vlsyyhlsvwjavfrzruyd")
