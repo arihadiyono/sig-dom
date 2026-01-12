@@ -161,7 +161,6 @@ def main_app():
                             kodepos_penerima,
                             keterangan,
                             waktu_kejadian, 
-                            penerima, 
                             ST_X(geom) as longitude, 
                             ST_Y(geom) as latitude
                         FROM titikan_antaran 
@@ -191,7 +190,7 @@ def main_app():
                                 
                                 folium.Marker(
                                     location=[row['latitude'], row['longitude']],
-                                    popup=f"<b>Connote : </b> {row['connote']}<br>Penerima: {row['penerima']}",
+                                    popup=f"<b>Connote : </b> {row['connote']}<br> <b> Penerima : </b>  {row['penerima']}",
                                     tooltip=f"{row['connote']}",
                                     icon=folium.Icon(color=color_icon, icon='bicycle', prefix='fa')
                                 ).add_to(m_antaran)
