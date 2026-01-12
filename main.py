@@ -98,7 +98,7 @@ def main_app():
         st.line_chart(chart_data)
 
     elif menu == "🗺️ Peta Wilayah Antaran":
-        st.header("Visualisasi Spasial Wilayah (Warna Cerah)")
+        st.header("Visualisasi Spasial Wilayah Antaran")
         
         try:
             with engine.connect() as conn:
