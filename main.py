@@ -136,65 +136,60 @@ def main_app():
         
         try:
             with engine.connect() as conn:
-                # 1. Ambil daftar pengantar unik yang ada di kantor tersebut
-                # Asumsi: tabel titik_antaran punya kolom 'pengantar' dan 'id_kantor'
-                query_pengantar = text("SELECT DISTINCT pengantar FROM titik_antaran WHERE id_kantor = :id_kantor")
+                # 1. Ambil daftar pengantar unik (Sesuaikan nama tabel ke titikan_antaran)
+                query_pengantar = text("SELECT DISTINCT id_petugas FROM titikan_antaran WHERE id_kantor = :id_kantor")
                 list_pengantar = conn.execute(query_pengantar, {"id_kantor": user['id']}).fetchall()
-                list_pengantar = [p[0] for p in list_pengantar]
+                list_pengantar = [p[0] for p in list_pengantar if p[0] is not None]
 
                 if list_pengantar:
-                    # Filter Pilih Pengantar
-                    selected_pengantar = st.selectbox("Pilih Nama Pengantar:", list_pengantar)
+                    selected_pengantar = st.selectbox("Pilih ID Petugas / Pengantar:", list_pengantar)
 
-                    # 2. Ambil data titik antaran berdasarkan pengantar yang dipilih
-                    # ST_X dan ST_Y digunakan jika kolom koordinat adalah tipe GEOMETRY(Point)
-                    # Jika kolomnya float biasa (lat/lon), sesuaikan query-nya
+                    # 2. Ambil data koordinat dari kolom 'geom' menggunakan PostGIS
                     query_titik = text("""
-                        SELECT id_resi, status, waktu, penerima, alamat,
+                        SELECT id_resi, status_antaran, waktu_kejadian, penerima, alamat_penerima,
                                ST_X(geom) as longitude, ST_Y(geom) as latitude
-                        FROM titik_antaran 
-                        WHERE pengantar = :pengantar AND id_kantor = :id_kantor
-                        ORDER BY waktu DESC
+                        FROM titikan_antaran 
+                        WHERE id_petugas = :petugas AND id_kantor = :id_kantor
+                        ORDER BY waktu_kejadian DESC
                     """)
-                    df_titik = pd.read_sql(query_titik, conn, params={"pengantar": selected_pengantar, "id_kantor": user['id']})
+                    df_titik = pd.read_sql(query_titik, conn, params={"petugas": selected_pengantar, "id_kantor": user['id']})
 
                     if not df_titik.empty:
-                        # Layout Kolom: Map di kiri, Tabel di kanan
                         col_map, col_data = st.columns([2, 1])
 
                         with col_map:
-                            st.subheader(f"Peta Sebaran Antaran: {selected_pengantar}")
-                            # Titik awal peta berdasarkan rata-rata koordinat
-                            center_lat = df_titik['latitude'].mean()
-                            center_lon = df_titik['longitude'].mean()
-                            m_antaran = folium.Map(location=[center_lat, center_lon], zoom_start=14)
+                            st.subheader(f"Peta Titikan: {selected_pengantar}")
+                            # Menghitung rata-rata posisi untuk titik tengah peta
+                            avg_lat = df_titik['latitude'].mean()
+                            avg_lon = df_titik['longitude'].mean()
+                            
+                            m_antaran = folium.Map(location=[avg_lat, avg_lon], zoom_start=14)
 
-                            # Tambahkan Marker untuk setiap titik
+                            # Menambahkan marker untuk setiap titikan
                             for _, row in df_titik.iterrows():
-                                color_marker = "blue" if row['status'] == "Selesai" else "red"
+                                # Hijau jika status sukses, Merah jika selain itu
+                                color_icon = "green" if "Selesai" in str(row['status_antaran']) else "red"
+                                
                                 folium.Marker(
                                     location=[row['latitude'], row['longitude']],
                                     popup=f"Resi: {row['id_resi']}<br>Penerima: {row['penerima']}",
-                                    tooltip=f"{row['id_resi']} - {row['status']}",
-                                    icon=folium.Icon(color=color_marker, icon='info-sign')
+                                    tooltip=f"{row['id_resi']} ({row['status_antaran']})",
+                                    icon=folium.Icon(color=color_icon, icon='info-sign')
                                 ).add_to(m_antaran)
                             
-                            st_folium(m_antaran, width="100%", height=500, key="map_antaran")
+                            st_folium(m_antaran, width="100%", height=500, key="map_riwayat")
 
                         with col_data:
-                            st.subheader("Detail Data")
-                            st.dataframe(df_titik[['id_resi', 'status', 'waktu', 'penerima']], use_container_width=True)
-                            
-                            # Statistik Singkat
-                            st.metric("Total Antaran", len(df_titik))
-                            st.success(f"Selesai: {len(df_titik[df_titik['status'] == 'Selesai'])}")
+                            st.subheader("Ringkasan")
+                            st.metric("Total Kiriman", len(df_titik))
+                            st.dataframe(df_titik[['id_resi', 'status_antaran', 'waktu_kejadian']], use_container_width=True)
                     else:
-                        st.warning(f"Tidak ada data antaran untuk pengantar {selected_pengantar}")
+                        st.warning(f"Tidak ada data titikan untuk petugas {selected_pengantar}")
                 else:
-                    st.info("Belum ada data pengantar yang tercatat di kantor ini.")
+                    st.info("Belum ada data riwayat antaran untuk kantor ini.")
 
         except Exception as e:
-            st.error(f"Gagal memuat riwayat antaran: {e}")
+            st.error(f"Gagal memuat riwayat: {e}")
 
 # --- JALANKAN APLIKASI ---
 if not st.session_state.logged_in:
