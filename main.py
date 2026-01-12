@@ -115,7 +115,7 @@ def main_app():
                 for idx, row in df.iterrows():
                     with cols[idx % 5]:
                         warna = get_bright_color(row['kodepos'])
-                        st.markdown(f"""<div style="background-color:{warna}; padding:10px; border-radius:5px; text-align:center; color:white; font-weight:bold;">{row['kodepos']}</div><div style="text-align:center; font-size:12px; margin-top:5px;"><b>{row['kelurahan']}</b><br>{row['luas_km2']:.2f} km²</div><br>""", unsafe_allow_html=True)
+                        st.markdown(f"""<div style="background-color:{warna}; padding:10px; border-radius:5px; text-align:center; color:white; font-weight:bold;">{row['kodepos']}</div><div style="text-align:center; font-size:12px; margin-top:5px;"><b>{row['kecamatan']}</b><br><b>{row['kelurahan']}</b><br>{row['luas_km2']:.2f} km²</div><br>""", unsafe_allow_html=True)
         except Exception as e: st.error(f"Error: {e}")
 
     # --- MENU: DATA RIWAYAT ---
