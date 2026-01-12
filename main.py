@@ -1,17 +1,16 @@
 import streamlit as st
-import pandas as pd
+import pd
 from sqlalchemy import create_engine, text
 import folium
 from streamlit_folium import st_folium
 from datetime import datetime
-import random  # Tambahkan ini
+import random
 
 # --- CONFIG & ENGINE ---
 st.set_page_config(page_title="SIG-DOM POS", layout="wide")
 
 @st.cache_resource
 def get_engine():
-    # Pastikan DB_URL sudah ada di Secrets Streamlit Cloud / Neon
     return create_engine(st.secrets["DB_URL"], pool_pre_ping=True)
 
 engine = get_engine()
@@ -27,11 +26,7 @@ VIBRANT_PALETTE = [
 ]
 
 def get_bright_color(kodepos):
-    """
-    Menggunakan hash kodepos agar warna konsisten untuk kodepos yang sama
-    namun tetap terlihat acak antar kodepos berbeda.
-    """
-    random.seed(int(kodepos)) # Biar warna tetap konsisten per kodepos
+    random.seed(int(kodepos)) 
     return random.choice(VIBRANT_PALETTE)
 
 # --- SESSION STATE ---
@@ -44,9 +39,10 @@ if 'user_info' not in st.session_state:
 def login_ui():
     c1, c2, c3 = st.columns([1, 1.2, 1])
     with c2:
-        # Gunakan path file atau URL yang benar untuk logo
+        # Menambahkan Logo di Halaman Login
+        st.image("Logo Posind Biru.png", width=200) 
         st.title("Login SIG-DOM")
-        st.subheader("PT Pos Indonesia")
+        st.subheader("PT Pos Indonesia (Persero)")
         with st.form("login_form"):
             u = st.text_input("Username")
             p = st.text_input("Password", type="password")
@@ -69,35 +65,24 @@ def main_app():
     user = st.session_state.user_info
     
     # SIDEBAR NAVIGASI
+    st.sidebar.image("Logo Posind Biru.png", use_container_width=True) # Logo di Sidebar
+    st.sidebar.markdown("---")
     st.sidebar.title("SIG-DOM Dashboard")
     st.sidebar.info(f"📍 {user['nama']}")
     
     menu = st.sidebar.selectbox("Pilih Menu:", [
-        #"🏠 Dashboard & Statistik", 
         "🗺️ Peta Wilayah Antaran", 
         "📦 Data Riwayat Antaran", 
-        #"⚙️ Manajemen User"
     ])
     
-    if st.sidebar.button("Logout"):
+    st.sidebar.markdown("---")
+    if st.sidebar.button("Logout", use_container_width=True):
         st.session_state.logged_in = False
         st.session_state.user_info = None
         st.rerun()
 
     # --- KONTEN MENU ---
-    if menu == "🏠 Dashboard & Statistik":
-        st.header("Dashboard Utama")
-        col1, col2, col3 = st.columns(3)
-        col1.metric("Total Zona", "12 Zona")
-        col2.metric("Titikan Hari Ini", "450 Paket")
-        col3.metric("Kurir Aktif", "8 Petugas")
-        
-        st.markdown("---")
-        st.subheader("Grafik Antaran Mingguan")
-        chart_data = pd.DataFrame([10, 25, 45, 30, 50], columns=["Paket"])
-        st.line_chart(chart_data)
-
-    elif menu == "🗺️ Peta Wilayah Antaran":
+    if menu == "🗺️ Peta Wilayah Antaran":
         st.header("Visualisasi Spasial Wilayah Antaran")
         
         try:
@@ -108,7 +93,6 @@ def main_app():
                 """), conn)
             
             if not df.empty:
-                # Titik tengah peta (Sesuaikan dengan area Anda)
                 m = folium.Map(location=[-6.9147, 107.6098], zoom_start=12)
                 
                 for _, row in df.iterrows():
@@ -152,15 +136,6 @@ def main_app():
             'Waktu': [datetime.now(), datetime.now()]
         }
         st.table(pd.DataFrame(data_dummy))
-
-    elif menu == "⚙️ Manajemen User":
-        st.header("Pengaturan Pengguna")
-        try:
-            with engine.connect() as conn:
-                df_users = pd.read_sql(text("SELECT username, nama_kantor, status FROM users_dc"), conn)
-                st.dataframe(df_users, use_container_width=True)
-        except Exception as e:
-            st.error(f"Gagal memuat data user: {e}")
 
 # --- JALANKAN APLIKASI ---
 if not st.session_state.logged_in:
