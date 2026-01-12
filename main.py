@@ -1,5 +1,5 @@
 import streamlit as st
-import pd
+import pandas as pd  # Ubah dari 'import pd' menjadi 'import pandas as pd'
 from sqlalchemy import create_engine, text
 import folium
 from streamlit_folium import st_folium
