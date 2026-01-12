@@ -137,21 +137,47 @@ def main_app():
                             status_up = str(row['status_antaran']).upper()
                             color_icon = "green" if status_up == "DELIVERED" else "red" if "FAILED" in status_up else "orange"
                             
-                            # TOOLTIP & POPUP TITIK ANTAR
+                            # --- TOOLTIP CUSTOM (HOVER) ---
+                            tooltip_html = f"""
+                            <div style="font-family: Arial; width: 200px;">
+                                <b style="color: #003366;">{row['connote']}</b><br>
+                                👤 {row['penerima']}<br>
+                                📦 {row['produk']}
+                            </div>
+                            """
+                            
+                            # --- POPUP CUSTOM (CLICK) ---
+                            popup_html = f"""
+                            <div style="width: 250px; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+                                <div style="background-color: #003366; color: white; padding: 8px; border-radius: 5px 5px 0 0; font-weight: bold; text-align: center;">
+                                    RINCIAN ANTARAN
+                                </div>
+                                <div style="padding: 10px; border: 1px solid #ddd; border-top: none; background-color: #f9f9f9;">
+                                    <table style="width: 100%; font-size: 12px; border-collapse: collapse;">
+                                        <tr><td><b>Connote</b></td><td>: {row['connote']}</td></tr>
+                                        <tr><td><b>Produk</b></td><td>: {row['produk']}</td></tr>
+                                        <tr><td><b>Penerima</b></td><td>: {row['penerima']}</td></tr>
+                                        <tr><td><b>Alamat</b></td><td>: {row['alamat_penerima'] if row['alamat_penerima'] else '-'}</td></tr>
+                                        <tr><td><b>Waktu</b></td><td>: {row['waktu_kejadian'].strftime('%H:%M:%S')}</td></tr>
+                                        <tr><td><b>Jeda</b></td><td>: <span style="color: blue;">{int(row['jeda'])} Menit</span></td></tr>
+                                    </table>
+                                    <div style="margin-top: 10px; text-align: center;">
+                                        <span style="background-color: {badge_color}; color: white; padding: 3px 8px; border-radius: 10px; font-size: 10px; font-weight: bold;">
+                                            {status_up}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                            """
+                            
                             folium.Marker(
-                                [row['latitude'], row['longitude']], 
-                                tooltip=f"{row['connote']} - {row['penerima']}",
-                                popup=folium.Popup(f"""
-                                    <b>Rincian Kiriman</b><br>
-                                    Connote: {row['connote']}<br>
-                                    Produk: {row['produk']}<br>
-                                    Penerima: {row['penerima']}<br>
-                                    Status: {row['status_antaran']}<br>
-                                    Waktu: {row['waktu_kejadian'].strftime('%H:%M:%S')}
-                                """, max_width=200),
+                                [row['latitude'], row['longitude']],
+                                tooltip=folium.Tooltip(tooltip_html),
+                                popup=folium.Popup(popup_html, max_width=300),
                                 icon=folium.Icon(color=color_icon, icon='bicycle', prefix='fa')
                             ).add_to(m_antaran)
-                        st_folium(m_antaran, width="100%", height=400, key=f"map_{selected_id}_{selected_date}")
+
+                        st_folium(m_antaran, width="100%", height=450, key=f"map_{selected_id}_{selected_date}")
 
                         # --- ANALISIS WAKTU ---
                         st.markdown("---")
