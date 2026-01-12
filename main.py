@@ -103,7 +103,7 @@ def main_app():
         try:
             with engine.connect() as conn:
                 df = pd.read_sql(text("""
-                    SELECT kodepos, kecamatan, ST_AsGeoJSON(geom)::json as geo 
+                    SELECT kodepos, kecamatan, kelurahan, ST_AsGeoJSON(geom)::json as geo 
                     FROM zona_antaran
                 """), conn)
             
@@ -122,7 +122,7 @@ def main_app():
                             'weight': 2,
                             'fillOpacity': 0.7,
                         },
-                        tooltip=folium.Tooltip(f"<b>{row['kecamatan']}</b> ({row['kodepos']})")
+                        tooltip=folium.Tooltip(f"Kodepos : {row['kodepos']} <br>Kecamatan :{row['kecamatan']} <br> Kelurahan :{row['kelurahan']} ")
                     ).add_to(m)
 
                 st_folium(m, width="100%", height=600)
