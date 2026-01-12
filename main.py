@@ -75,22 +75,65 @@ def main_app():
         st.line_chart(chart_data)
 
     elif menu == "🗺️ Peta Wilayah Antaran":
-        st.header("Visualisasi Spasial Wilayah")
-        st.write("Menampilkan pembagian zona berdasarkan kodepos.")
+        st.header("Visualisasi Spasial Wilayah per Kodepos")
         
-        # Koordinat default Bandung (Sesuaikan dengan wilayah Anda)
-        m = folium.Map(location=[-6.9147, 107.6098], zoom_start=13)
-        
-        # Ambil data spasial dari Neon
+        # 1. Fungsi untuk menentukan warna unik berdasarkan kodepos
+        def get_color(kodepos):
+            # Daftar warna yang kontras
+            colors = [
+                'red', 'blue', 'green', 'purple', 'orange', 'darkred', 
+                'lightred', 'beige', 'darkblue', 'darkgreen', 'cadetblue', 
+                'darkpurple', 'pink', 'lightblue', 'lightgreen', 'black'
+            ]
+            # Logika sederhana: ambil indeks warna berdasarkan hash kodepos
+            index = hash(str(kodepos)) % len(colors)
+            return colors[index]
+
+        # 2. Ambil data dari Neon
         try:
             with engine.connect() as conn:
-                df = pd.read_sql(text("SELECT kodepos, nama_zona, ST_AsGeoJSON(geom)::json as geo FROM zona_antaran"), conn)
+                df = pd.read_sql(text("""
+                    SELECT kodepos, nama_zona, ST_AsGeoJSON(geom)::json as geo 
+                    FROM zona_antaran
+                """), conn)
+            
+            if not df.empty:
+                # Koordinat default (Sesuaikan dengan wilayah operasional Anda)
+                m = folium.Map(location=[-6.9147, 107.6098], zoom_start=13, control_scale=True)
+                
+                # 3. Masukkan data ke peta dengan warna berbeda
                 for _, row in df.iterrows():
-                    folium.GeoJson(row['geo'], tooltip=row['nama_zona']).add_to(m)
-        except:
-            st.info("Belum ada data geometri zona (Polygon) di database.")
+                    color = get_color(row['kodepos'])
+                    
+                    folium.GeoJson(
+                        row['geo'],
+                        name=f"Kodepos {row['kodepos']}",
+                        style_function=lambda x, color=color: {
+                            'fillColor': color,
+                            'color': 'black',     # Garis tepi hitam
+                            'weight': 2,
+                            'fillOpacity': 0.5,
+                        },
+                        tooltip=folium.Tooltip(f"<b>Zona:</b> {row['nama_zona']}<br><b>Kodepos:</b> {row['kodepos']}")
+                    ).add_to(m)
 
-        st_folium(m, width="100%", height=500)
+                # Tambahkan kontrol layer
+                folium.LayerControl().add_to(m)
+                
+                # Tampilkan peta
+                st_folium(m, width="100%", height=600)
+                
+                # 4. Tampilkan Tabel Legenda di bawah peta
+                st.markdown("### 📋 Keterangan Warna Kodepos")
+                legend_df = df[['kodepos', 'nama_zona']].copy()
+                legend_df['Warna'] = legend_df['kodepos'].apply(get_color)
+                st.dataframe(legend_df, use_container_width=True)
+                
+            else:
+                st.info("Belum ada data geometri zona (Polygon) di database Neon.")
+                
+        except Exception as e:
+            st.error(f"Gagal memuat peta: {e}")
 
     elif menu == "📦 Data Titikan Paket":
         st.header("Data Riwayat Antaran")
