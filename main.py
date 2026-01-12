@@ -47,7 +47,7 @@ def login_ui():
         
         # Mengatur posisi gambar ke tengah secara manual dengan kolom internal atau CSS
         # Ukuran ideal untuk logo instansi di web biasanya antara 180px - 250px
-        st.image("Logo Posind Biru.png", width=220) 
+        st.image("Logo Posind Biru.png", width=100) 
         
         # Judul dengan alignment center
         st.markdown("""
@@ -82,7 +82,7 @@ def main_app():
     user = st.session_state.user_info
     
     # SIDEBAR NAVIGASI
-    st.sidebar.image("Logo Posind Biru.png", use_container_width=True, width=30) # Logo di Sidebar
+    st.sidebar.image("Logo Posind Biru.png", use_container_width=True, width=20) # Logo di Sidebar
     st.sidebar.markdown("---")
     st.sidebar.title("SIG-DOM Dashboard")
     st.sidebar.info(f"📍 {user['nama']}")
