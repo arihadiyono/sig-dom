@@ -190,7 +190,7 @@ def main_app():
                                 
                                 folium.Marker(
                                     location=[row['latitude'], row['longitude']],
-                                    popup=f"<b>Connote : </b> {row['connote']}<br> <b> Penerima : </b>  {row['penerima']} <br> <b> Produk : </b>  {row['produk']}  <br> <b> Jenis : </b>  {row['jenis_kiriman']}  <br> <b> Berat : </b>  {row['berat_kg']} <br> <b> Waktu : </b>  {row['waktu_kejadian']}",
+                                    popup=f"<b>Connote : </b> {row['connote']}<br> <b> Penerima : </b>  {row['penerima']} <br> <b> Produk : </b>  {row['produk']}  <br> <b> Jenis : </b>  {row['jenis_kiriman']}  <br> <b> Berat : </b>  {row['berat_kg']} <br> <b> Waktu : </b>  {row['waktu_kejadian']} <br> <b> Status : </b>  {row['status_antaran']}",
                                     tooltip=f"{row['connote']}",
                                     icon=folium.Icon(color=color_icon, icon='bicycle', prefix='fa')
                                 ).add_to(m_antaran)
