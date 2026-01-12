@@ -4,15 +4,35 @@ from sqlalchemy import create_engine, text
 import folium
 from streamlit_folium import st_folium
 from datetime import datetime
+import random  # Tambahkan ini
 
 # --- CONFIG & ENGINE ---
 st.set_page_config(page_title="SIG-DOM POS", layout="wide")
 
 @st.cache_resource
 def get_engine():
+    # Pastikan DB_URL sudah ada di Secrets Streamlit Cloud / Neon
     return create_engine(st.secrets["DB_URL"], pool_pre_ping=True)
 
 engine = get_engine()
+
+# --- PALET WARNA (Global) ---
+VIBRANT_PALETTE = [
+    "#FF5733", "#33FF57", "#3357FF", "#F333FF", "#FF33A1",
+    "#33FFF5", "#FFD700", "#ADFF2F", "#FF8C00", "#00FF00",
+    "#00BFFF", "#FF00FF", "#7B68EE", "#FFA07A", "#00FA9A",
+    "#FF1493", "#1E90FF", "#FFFF00", "#FF4500", "#8A2BE2",
+    "#00CED1", "#9ACD32", "#FF6347", "#40E0D0", "#EE82EE",
+    "#00FF7F", "#4169E1", "#D2691E", "#32CD32", "#FF69B4"
+]
+
+def get_bright_color(kodepos):
+    """
+    Menggunakan hash kodepos agar warna konsisten untuk kodepos yang sama
+    namun tetap terlihat acak antar kodepos berbeda.
+    """
+    random.seed(int(kodepos)) # Biar warna tetap konsisten per kodepos
+    return random.choice(VIBRANT_PALETTE)
 
 # --- SESSION STATE ---
 if 'logged_in' not in st.session_state:
@@ -24,28 +44,31 @@ if 'user_info' not in st.session_state:
 def login_ui():
     c1, c2, c3 = st.columns([1, 1.2, 1])
     with c2:
-        st.image("Logo Posind Biru.png", width=120)
+        # Gunakan path file atau URL yang benar untuk logo
         st.title("Login SIG-DOM")
+        st.subheader("PT Pos Indonesia")
         with st.form("login_form"):
             u = st.text_input("Username")
             p = st.text_input("Password", type="password")
             if st.form_submit_button("Masuk", use_container_width=True):
-                with engine.connect() as conn:
-                    query = text("SELECT id_kantor, nama_kantor FROM users_dc WHERE username = :u AND password_hash = :p")
-                    res = conn.execute(query, {"u": u, "p": p}).fetchone()
-                    if res:
-                        st.session_state.logged_in = True
-                        st.session_state.user_info = {"id": res[0], "nama": res[1]}
-                        st.rerun()
-                    else:
-                        st.error("Username atau Password salah!")
+                try:
+                    with engine.connect() as conn:
+                        query = text("SELECT id_kantor, nama_kantor FROM users_dc WHERE username = :u AND password_hash = :p")
+                        res = conn.execute(query, {"u": u, "p": p}).fetchone()
+                        if res:
+                            st.session_state.logged_in = True
+                            st.session_state.user_info = {"id": res[0], "nama": res[1]}
+                            st.rerun()
+                        else:
+                            st.error("Username atau Password salah!")
+                except Exception as e:
+                    st.error(f"Error Database: {e}")
 
 # --- MENU UTAMA ---
 def main_app():
     user = st.session_state.user_info
     
     # SIDEBAR NAVIGASI
-    st.sidebar.image("Logo Posind Biru.png", width=80)
     st.sidebar.title("SIG-DOM Dashboard")
     st.sidebar.info(f"📍 {user['nama']}")
     
@@ -58,6 +81,7 @@ def main_app():
     
     if st.sidebar.button("Logout"):
         st.session_state.logged_in = False
+        st.session_state.user_info = None
         st.rerun()
 
     # --- KONTEN MENU ---
@@ -70,44 +94,12 @@ def main_app():
         
         st.markdown("---")
         st.subheader("Grafik Antaran Mingguan")
-        # Placeholder grafik
         chart_data = pd.DataFrame([10, 25, 45, 30, 50], columns=["Paket"])
         st.line_chart(chart_data)
 
     elif menu == "🗺️ Peta Wilayah Antaran":
         st.header("Visualisasi Spasial Wilayah (Warna Cerah)")
         
-        # 1. Fungsi dengan palet warna cerah & vibrant
-        # 1. Definisi 30 warna vibrant (di luar fungsi agar tidak dibuat ulang setiap saat)
-VIBRANT_PALETTE = [
-    "#FF5733", "#33FF57", "#3357FF", "#F333FF", "#FF33A1",
-    "#33FFF5", "#FFD700", "#ADFF2F", "#FF8C00", "#00FF00",
-    "#00BFFF", "#FF00FF", "#7B68EE", "#FFA07A", "#00FA9A",
-    "#FF1493", "#1E90FF", "#FFFF00", "#FF4500", "#8A2BE2",
-    "#00CED1", "#9ACD32", "#FF6347", "#40E0D0", "#EE82EE",
-    "#00FF7F", "#4169E1", "#D2691E", "#32CD32", "#FF69B4"
-]
-
-# Opsional: Jika ingin benar-benar unik dan tidak ada warna yang sama muncul dua kali
-# dalam satu sesi, kita bisa membuat salinan untuk "diambil" satu per satu.
-available_colors = VIBRANT_PALETTE.copy()
-random.shuffle(available_colors)
-
-def get_bright_color(kodepos):
-    """
-    Fungsi ini sekarang akan memberikan warna acak yang berbeda 
-    setiap kali dipanggil, tanpa mempedulikan nilai kodepos.
-    """
-    global available_colors
-    
-    # Jika stok warna habis, isi ulang dan acak lagi
-    if not available_colors:
-        available_colors = VIBRANT_PALETTE.copy()
-        random.shuffle(available_colors)
-    
-    # Ambil satu warna dan hapus dari daftar agar tidak kembar dalam satu putaran
-    return available_colors.pop()
-
         try:
             with engine.connect() as conn:
                 df = pd.read_sql(text("""
@@ -116,7 +108,8 @@ def get_bright_color(kodepos):
                 """), conn)
             
             if not df.empty:
-                m = folium.Map(location=[-6.9147, 107.6098], zoom_start=13)
+                # Titik tengah peta (Sesuaikan dengan area Anda)
+                m = folium.Map(location=[-6.9147, 107.6098], zoom_start=12)
                 
                 for _, row in df.iterrows():
                     color = get_bright_color(row['kodepos'])
@@ -124,33 +117,35 @@ def get_bright_color(kodepos):
                     folium.GeoJson(
                         row['geo'],
                         style_function=lambda x, color=color: {
-                            'fillColor': color,   # Warna cerah pilihan
-                            'color': 'white',     # Garis tepi putih agar lebih "pop"
+                            'fillColor': color,
+                            'color': 'white',
                             'weight': 2,
-                            'fillOpacity': 0.7,   # Opacity naik dikit biar warna lebih solid
+                            'fillOpacity': 0.7,
                         },
                         tooltip=folium.Tooltip(f"<b>{row['kecamatan']}</b> ({row['kodepos']})")
                     ).add_to(m)
 
                 st_folium(m, width="100%", height=600)
                 
-                # Menampilkan legenda dengan warna aslinya
                 st.markdown("### 📋 Keterangan Warna")
-                cols = st.columns(len(df) if len(df) < 5 else 5)
+                cols = st.columns(5)
                 for idx, row in df.iterrows():
                     with cols[idx % 5]:
                         warna = get_bright_color(row['kodepos'])
-                        st.markdown(f'<div style="background-color:{warna}; padding:10px; border-radius:5px; text-align:center; color:black; font-weight:bold;">{row["kodepos"]}</div>', unsafe_allow_html=True)
-                        st.caption(row['kecamatan'])
+                        st.markdown(f"""
+                            <div style="background-color:{warna}; padding:10px; border-radius:5px; 
+                            text-align:center; color:white; font-weight:bold; text-shadow: 1px 1px 2px black;">
+                                {row['kodepos']}
+                            </div>
+                            <div style="text-align:center; font-size:12px; margin-bottom:10px;">{row['kecamatan']}</div>
+                        """, unsafe_allow_html=True)
             else:
                 st.info("Belum ada data geometri di database.")
         except Exception as e:
-            st.error(f"Gagal: {e}")
+            st.error(f"Gagal memuat peta: {e}")
 
     elif menu == "📦 Data Titikan Paket":
         st.header("Data Riwayat Antaran")
-        st.write("Daftar koordinat paket yang telah diantarkan oleh kurir.")
-        # Contoh tabel data
         data_dummy = {
             'No Resi': ['P24001', 'P24002'],
             'Status': ['Selesai', 'Selesai'],
@@ -160,9 +155,12 @@ def get_bright_color(kodepos):
 
     elif menu == "⚙️ Manajemen User":
         st.header("Pengaturan Pengguna")
-        with engine.connect() as conn:
-            df_users = pd.read_sql(text("SELECT username, nama_kantor, status FROM users_dc"), conn)
-            st.dataframe(df_users, use_container_width=True)
+        try:
+            with engine.connect() as conn:
+                df_users = pd.read_sql(text("SELECT username, nama_kantor, status FROM users_dc"), conn)
+                st.dataframe(df_users, use_container_width=True)
+        except Exception as e:
+            st.error(f"Gagal memuat data user: {e}")
 
 # --- JALANKAN APLIKASI ---
 if not st.session_state.logged_in:
