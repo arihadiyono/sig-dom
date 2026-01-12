@@ -29,7 +29,7 @@ engine = get_engine()
 # 3. FUNGSI AUTHENTIKASI (DENGAN FEEDBACK ERROR)
 def check_login(username, password):
     if engine is None:
-        st.error("Koneksi Database Gagal. Periksa DB_URL di Secrets Streamlit.")
+        st.error("Engine database belum siap.")
         return None
     
     query = text("""
@@ -39,19 +39,15 @@ def check_login(username, password):
     """)
     
     try:
+        # Coba koneksi sederhana dulu
         with engine.connect() as conn:
             result = conn.execute(query, {"u": username, "p": password}).fetchone()
             if result:
-                return {
-                    "id_kantor": result[0],
-                    "username": result[1],
-                    "nama_kantor": result[2],
-                    "status": result[3]
-                }
-            else:
-                return "AUTH_FAILED"
+                return {"id_kantor": result[0], "username": result[1], "nama_kantor": result[2], "status": result[3]}
+            return "AUTH_FAILED"
     except Exception as e:
-        st.error(f"Error Database: {str(e)}")
+        # Menampilkan detail error di aplikasi agar Anda bisa copy ke sini
+        st.warning(f"Detail kendala koneksi: {str(e)}")
         return None
 
 # --- INISIALISASI SESSION STATE ---
