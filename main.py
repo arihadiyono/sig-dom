@@ -109,7 +109,6 @@ def main_app():
 
                 st_folium(m, width="100%", height=600)
                 
-                # --- UPDATE BAGIAN KETERANGAN WARNA ---
                 st.markdown("### 📋 Keterangan Warna")
                 cols = st.columns(5)
                 for idx, row in df.iterrows():
@@ -136,8 +135,6 @@ def main_app():
         
         try:
             with engine.connect() as conn:
-                # 1. Ambil daftar pengantar (ID + Nama) dari tabel petugas_pengantar
-                # Join dilakukan untuk memastikan petugas tersebut memang memiliki data di titikan_antaran
                 query_petugas = text("""
                     SELECT DISTINCT p.id_petugas, p.nama_petugas 
                     FROM petugas_antaran p
@@ -145,21 +142,18 @@ def main_app():
                     WHERE p.id_kantor = :id_kantor
                 """)
                 res_petugas = conn.execute(query_petugas, {"id_kantor": user['id']}).fetchall()
-                
-                # Buat dictionary untuk mapping ID ke Nama agar tampilan di combo box lebih informatif
-                # Format: "ID - NAMA"
                 dict_petugas = {f"{p[0]} - {p[1]}": p[0] for p in res_petugas}
 
                 if dict_petugas:
-                    # Combo box menampilkan "ID - NAMA", tapi yang disimpan adalah ID-nya saja
                     selected_label = st.selectbox("Pilih Petugas Antar:", list(dict_petugas.keys()))
                     selected_id = dict_petugas[selected_label]
 
-                    # 2. Query Data Riwayat berdasarkan ID yang dipilih
                     query_titik = text("""
                         SELECT 
                             connote, produk, jenis_kiriman, status_antaran, 
-                            penerima, alamat_penerima, waktu_kejadian, 
+                            is_cod, nominal_cod, berat_kg, penerima, 
+                            alamat_penerima, telp_penerima, kodepos_penerima, 
+                            keterangan, waktu_kejadian, 
                             ST_X(geom) as longitude, 
                             ST_Y(geom) as latitude
                         FROM titikan_antaran 
@@ -173,21 +167,33 @@ def main_app():
                     })
 
                     if not df_titik.empty:
-                        # Tampilan Peta Full Width
+                        # Peta Full Width
                         st.subheader(f"Peta Sebaran: {selected_label}")
                         avg_lat = df_titik['latitude'].mean()
                         avg_lon = df_titik['longitude'].mean()
-                        
                         m_antaran = folium.Map(location=[avg_lat, avg_lon], zoom_start=14)
 
                         for _, row in df_titik.iterrows():
                             status_str = str(row['status_antaran']).upper()
                             color_icon = "green" if "SELESAI" in status_str or "DELIVERED" in status_str else "orange"
                             
+                            # Tooltip HTML Detail
+                            tooltip_html = f"""
+                            <div style="font-family: sans-serif; font-size: 12px; width: 250px;">
+                                <h4 style="margin:0 0 5px 0; color:#003366;">{row['connote']}</h4>
+                                <b>Penerima:</b> {row['penerima']}<br>
+                                <b>Alamat:</b> {row['alamat_penerima']}<br>
+                                <b>Produk:</b> {row['produk']} ({row['jenis_kiriman']})<br>
+                                <b>Status:</b> <span style="color:{'green' if color_icon=='green' else 'red'};">{row['status_antaran']}</span><br>
+                                <b>Waktu:</b> {row['waktu_kejadian']}<br>
+                                <b>Keterangan:</b> {row['keterangan'] or '-'}
+                            </div>
+                            """
+                            
                             folium.Marker(
                                 location=[row['latitude'], row['longitude']],
-                                popup=f"<b>Connote:</b> {row['connote']}<br><b>Penerima:</b> {row['penerima']}",
-                                tooltip=f"{row['connote']}",
+                                popup=folium.Popup(tooltip_html, max_width=300),
+                                tooltip=f"{row['connote']} - {row['penerima']}",
                                 icon=folium.Icon(color=color_icon, icon='bicycle', prefix='fa')
                             ).add_to(m_antaran)
                         
@@ -195,16 +201,25 @@ def main_app():
 
                         st.markdown("---")
 
-                        # Bagian Tabel Detail di Bawah Peta
-                        st.subheader("Rincian Data Kiriman")
+                        # --- BAGIAN RESUME & RINCIAN ---
+                        st.subheader("📊 Resume & Rincian Kiriman")
                         
-                        m1, m2 = st.columns(2)
-                        m1.metric("Total Kiriman", len(df_titik))
+                        # Metrik Utama
+                        m1, m2, m3 = st.columns(3)
+                        m1.metric("Total Antaran", len(df_titik))
                         success_count = len(df_titik[df_titik['status_antaran'].str.contains('Selesai|Delivered', case=False, na=False)])
-                        m2.metric("Status Selesai", success_count)
+                        m2.metric("Berhasil (Selesai)", success_count)
+                        m3.metric("Gagal / Proses", len(df_titik) - success_count)
 
+                        # Tabel Resume per Produk
+                        st.markdown("##### Resume per Produk")
+                        resume_produk = df_titik.groupby(['produk', 'status_antaran']).size().reset_index(name='Jumlah')
+                        st.dataframe(resume_produk, use_container_width=True, hide_index=True)
+
+                        # Tabel Detail Lengkap
+                        st.markdown("##### Rincian Data")
                         st.dataframe(
-                            df_titik[['connote', 'produk', 'penerima', 'status_antaran', 'waktu_kejadian', 'alamat_penerima']], 
+                            df_titik[['connote', 'produk', 'penerima', 'status_antaran', 'waktu_kejadian', 'alamat_penerima', 'keterangan']], 
                             use_container_width=True,
                             hide_index=True
                         )
