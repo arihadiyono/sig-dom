@@ -1,5 +1,5 @@
 import streamlit as st
-import pandas as pd  # Ubah dari 'import pd' menjadi 'import pandas as pd'
+import pandas as pd
 from sqlalchemy import create_engine, text
 import folium
 from streamlit_folium import st_folium
@@ -37,33 +37,16 @@ if 'user_info' not in st.session_state:
 
 # --- FUNGSI LOGIN ---
 def login_ui():
-    # Membuat 3 kolom agar form berada di tengah
-    # Kolom kiri dan kanan (c1 & c3) berfungsi sebagai padding/spasi
-    c1, c2, c3 = st.columns([1, 1.5, 1]) 
-    
+    c1, c2, c3 = st.columns([1, 1.2, 1])
     with c2:
-        # Menambahkan spasi kosong agar tidak terlalu mepet ke atas
         st.markdown("<br><br>", unsafe_allow_html=True)
-        
-        # Mengatur posisi gambar ke tengah secara manual dengan kolom internal atau CSS
-        # Ukuran ideal untuk logo instansi di web biasanya antara 180px - 250px
-        st.image("Logo Posind Biru.png", width=100) 
-        
-        # Judul dengan alignment center
-        st.markdown("""
-            <h2 style='text-align: center; margin-bottom: 0;'>SIG-DOM Dashboard</h2>
-            <p style='text-align: center; color: gray;'>PT Pos Indonesia (Persero)</p>
-            <br>
-        """, unsafe_allow_html=True)
+        st.markdown("<h1 style='text-align: center;'>SIG-DOM Dashboard</h1>", unsafe_allow_html=True)
+        st.markdown("<p style='text-align: center; color: gray;'>PT Pos Indonesia (Persero)</p>", unsafe_allow_html=True)
         
         with st.form("login_form"):
             u = st.text_input("Username")
             p = st.text_input("Password", type="password")
-            
-            # Tombol login yang memenuhi lebar kolom
-            submit = st.form_submit_button("MASUK", use_container_width=True)
-            
-            if submit:
+            if st.form_submit_button("Masuk", use_container_width=True):
                 try:
                     with engine.connect() as conn:
                         query = text("SELECT id_kantor, nama_kantor FROM users_dc WHERE username = :u AND password_hash = :p")
@@ -78,16 +61,13 @@ def login_ui():
                     st.error(f"Error Database: {e}")
 
 # --- MENU UTAMA ---
-# --- MENU UTAMA ---
 def main_app():
     user = st.session_state.user_info
     
     # SIDEBAR NAVIGASI
-    # use_container_width dihapus, width diatur ke 80 agar proporsional
-    st.sidebar.image("Logo Posind Biru.png", width=80) 
+    st.sidebar.title("SIG-DOM")
+    st.sidebar.markdown(f"**📍 {user['nama']}**")
     st.sidebar.markdown("---")
-    st.sidebar.title("SIG-DOM Dashboard")
-    st.sidebar.info(f"📍 {user['nama']}")
     
     menu = st.sidebar.selectbox("Pilih Menu:", [
         "🗺️ Peta Wilayah Antaran", 
@@ -116,7 +96,6 @@ def main_app():
                 
                 for _, row in df.iterrows():
                     color = get_bright_color(row['kodepos'])
-                    
                     folium.GeoJson(
                         row['geo'],
                         style_function=lambda x, color=color: {
