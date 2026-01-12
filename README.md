@@ -40,4 +40,11 @@ Tanpa visualisasi spasial, manajemen di Delivery Center (DC) atau Kantor Cabang/
   - Database Driver:  PostgreSQL
   - Frontend : React
   - Map : Leaflet
+# SIG-DOM (Sistem Informasi Geografis - Delivery Operation Management)
+Projek ini adalah sistem pemantauan penghantaran PT Pos Indonesia menggunakan GIS.
 
+### Stack Teknologi:
+- **Database:** PostgreSQL + PostGIS (Supabase)
+- **Language:** Python
+- **Framework:** Streamlit
+- **Maps:** Leaflet via Folium
